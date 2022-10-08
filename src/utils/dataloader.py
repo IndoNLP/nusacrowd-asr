@@ -77,20 +77,22 @@ def load_asr_tasks(langs=['ind']):
     tasks = []
     for lang in langs:
         tasks += SPEECH_RECOGNITION_TASKS[lang] if lang in SPEECH_RECOGNITION_TASKS else []
-        
-    asr_datasets = {
-        helper.config.name: helper.load_dataset() for helper in conhelps.filtered(lambda x: x.config.name in tasks)
-    }
+
+    asr_datasets = {}
+    for helper in conhelps.filtered(lambda x: x.config.name in tasks):
+        print(f'Loading {helper.config.name}')
+        asr_datasets[helper.config.name] = helper.load_dataset() 
     return asr_datasets
 
 def load_tts_tasks(lang=['ind']):
     tasks = []
     for lang in langs:
         tasks += TTS_TASKS[lang] if lang in TTS_TASKS else []
-        
-    tts_datasets = {
-        helper.config.name: helper.load_dataset() for helper in conhelps.filtered(lambda x: x.config.name in tasks)
-    }
+
+    tts_datasets = {}
+    for helper in conhelps.filtered(lambda x: x.config.name in tasks):
+        print(f'Loading {helper.config.name}')
+        tts_datasets[helper.config.name] = helper.load_dataset() 
     return tts_datasets
 
 def load_slu_tasks():
