@@ -9,5 +9,8 @@ jiwer
 jieba
 editdistance
 tensorboard
+tensorboardX
 fairscale
 tqdm
+editdistance
+jieba

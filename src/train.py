@@ -37,9 +37,10 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
-from args_helper import AdditionalTrainingArguments, ModelArguments, DataArguments, TrainingArguments
-from utils import CHARS_TO_IGNORE, tokenize_for_mer, tokenize_for_cer
-from data_utils import speech_file_to_array_fn, load_dataset, DataCollatorCTCWithPadding
+from utils.args_helper import AdditionalTrainingArguments, ModelArguments, DataArguments, TrainingArguments
+from utils.asr_utils import CHARS_TO_IGNORE, tokenize_for_mer, tokenize_for_cer
+from utils.data_utils import DataCollatorCTCWithPadding
+from utils.dataloader import load_speech_datasets, load_asr_task
 
 import datasets
 from datasets import load_from_disk, set_caching_enabled
@@ -78,7 +79,6 @@ def load_processor(model_args, training_args):
         special_tokens = _get_pretrained_special_tokens()
         pretrained_vocab = []
         
-
     logger.info("Vocab length (initial): {}".format(len(pretrained_vocab)))
     print("Vocab length (initial):", len(pretrained_vocab))
 
@@ -180,19 +180,24 @@ def run(model_args, data_args, training_args, additional_training_args):
         ###
         # Prepare Dataset
         ###
-        lang = additional_training_args.lang.split(",")
-        print('LANGUAGE TYPES USED: {}'.format(lang))
+        task_config_name = additional_training_args.task_config_name
+        if task_config_name is not None:
+            # Use task config name
+            print('Loading dataset...')
+            train_dataset, valid_dataset, test_dataset_dict = load_asr_task(task_config_name)
+        else:
+            # Use language
+            lang = additional_training_args.lang.split(",")
+            print('LANGUAGE TYPES USED: {}'.format(lang))
+
+            print('Loading dataset...')
+            train_dataset, valid_dataset, test_dataset_dict = load_speech_datasets(asr=True, tts=True, train_lang=lang)
 
         raw_datasets = DatasetDict()
-        print('Loading train dataset...')
-        raw_datasets["train"] = load_dataset(data_args.train_manifest_path, data_args.preprocessing_num_workers, 
-                                        data_args.audio_column_name, data_args.text_column_name, lang=lang)
-        print('Loading validation dataset...')
-        raw_datasets["valid"] = load_dataset(data_args.valid_manifest_path, data_args.preprocessing_num_workers, 
-                                        data_args.audio_column_name, data_args.text_column_name, lang=lang)
-        print('Loading test dataset...')
-        raw_datasets["test"] = load_dataset(data_args.test_manifest_path, data_args.preprocessing_num_workers, 
-                                        data_args.audio_column_name, data_args.text_column_name, lang=lang)
+        raw_datasets["train"] = train_dataset
+        raw_datasets["valid"] = valid_dataset
+        for config_name, test_dset in test_dataset_dict.items():
+            raw_datasets[f"test_{config_name}"] = test_dset
 
         print('Preprocess dataset...')
 
@@ -213,9 +218,7 @@ def run(model_args, data_args, training_args, additional_training_args):
                 desc="remove special characters from datasets",
                 load_from_cache_file=True,
                 cache_file_names={
-                    "train": "{}/train_clean.arrow".format(cache_dir_path),
-                    "valid": "{}/valid_clean.arrow".format(cache_dir_path),
-                    "test": "{}/test_clean.arrow".format(cache_dir_path),
+                    subset: f"{cache_dir_path}/{subset}_clean.arrow" for subset in raw_datasets.keys()
                 }
             )
 
@@ -233,16 +236,14 @@ def run(model_args, data_args, training_args, additional_training_args):
                 desc="build vocabulary",
                 load_from_cache_file=True,
                 cache_file_names={
-                    "train": "{}/train_vocab.arrow".format(cache_dir_path),
-                    "valid": "{}/valid_vocab.arrow".format(cache_dir_path),
-                    "test": "{}/test_vocab.arrow".format(cache_dir_path),
+                    subset: f"{cache_dir_path}/{subset}_vocab.arrow" for subset in raw_datasets.keys()
                 }
             )
 
             def flatten(vocab_split):
                 return list(chain.from_iterable(list(chain.from_iterable(vocab_split))))
 
-            vocab_list = list(set(flatten(_vocab["train"]["vocab"]) + flatten(_vocab["valid"]["vocab"]) + flatten(_vocab["test"]["vocab"])))
+            vocab_list = list(set(list(chain.from_iterable([flatten(_vocab[subset]["vocab"]) for subset in _vocab.keys()]))))
             # vocab_dict = {v: k for k, v in enumerate(vocab_list)}
             # vocab_dict["|"] = vocab_dict[" "]
             # vocab_dict["[UNK]"] = len(vocab_dict)
@@ -260,7 +261,7 @@ def run(model_args, data_args, training_args, additional_training_args):
 
         def prepare_dataset(batch):
             # Preprocess audio
-            batch["input_values"] = processor(batch["speech_sample"], sampling_rate=16000).input_values[0]
+            batch["input_values"] = processor(batch[data_args.audio_column_name]['array'], sampling_rate=16000).input_values[0]
 
             # Preprocess text
             with processor.as_target_processor():
@@ -276,9 +277,7 @@ def run(model_args, data_args, training_args, additional_training_args):
                 desc="preprocess datasets",
                 load_from_cache_file=True,
                 cache_file_names={
-                    "train": "{}/train_vec.arrow".format(cache_dir_path),
-                    "valid": "{}/valid_vec.arrow".format(cache_dir_path),
-                    "test": "{}/test_vec.arrow".format(cache_dir_path),
+                    subset: f"{cache_dir_path}/{subset}_vec.arrow" for subset in raw_datasets.keys()
                 }
             )
         
@@ -339,43 +338,6 @@ def run(model_args, data_args, training_args, additional_training_args):
         # we do not want to group tokens when computing the metrics
         label_strs = processor.batch_decode(pred.label_ids, group_tokens=False)
 
-        def _what_language(sentence):
-            def __contains_character(sentence, language="eng"):
-                _sentence = re.sub(r"[UNK]", "", sentence)
-                if language == "eng":
-                    pattern = "([a-z]|[A-Z])+"
-                elif language == "yue":
-                    pattern = "[\\u4e00-\\u9fff]+"
-                else:
-                    return False
-                return re.search(pattern, _sentence)
-
-            eng = __contains_character(sentence, language="eng")
-            yue = __contains_character(sentence, language="yue")
-            if eng is not None and yue is not None:
-                return "cs"
-            elif eng is not None:
-                return "eng"
-            elif yue is not None:
-                return "yue"
-            else:
-                return "others"
-
-        # split based on language
-        eng_pred_strs, eng_label_strs = [], []
-        yue_pred_strs, yue_label_strs = [], []
-        cs_pred_strs, cs_label_strs = [], []
-        for i, (pred_str, label_str) in enumerate(zip(pred_strs, label_strs)):
-            if _what_language(label_str) == "cs":
-                cs_pred_strs.append(pred_str)
-                cs_label_strs.append(label_str)
-            elif _what_language(label_str) == "eng":
-                eng_pred_strs.append(pred_str)
-                eng_label_strs.append(label_str)
-            else:
-                yue_pred_strs.append(pred_str)
-                yue_label_strs.append(label_str)
-
         def _calculate_mer_and_cer(pred_strs, label_strs):
             if len(label_strs) == 0:
                 return 0, 0
@@ -398,15 +360,9 @@ def run(model_args, data_args, training_args, additional_training_args):
                 return mer, cer
 
         mer, cer = _calculate_mer_and_cer(pred_strs, label_strs)
-        cs_mer, cs_cer = _calculate_mer_and_cer(cs_pred_strs, cs_label_strs)
-        eng_mer, eng_cer = _calculate_mer_and_cer(eng_pred_strs, eng_label_strs)
-        yue_mer, yue_cer = _calculate_mer_and_cer(yue_pred_strs, yue_label_strs)
 
         metrics = {
-            "mer": mer, "cer": cer,
-            "mer_cs": cs_mer, "cer_cs": cs_cer,
-            "mer_eng": eng_mer, "cer_eng": eng_cer,
-            "mer_yue": yue_mer, "cer_yue": yue_cer,
+            "mer": mer, "cer": cer
         }
 
         logger.info(json.dumps(metrics))
@@ -453,13 +409,16 @@ def run(model_args, data_args, training_args, additional_training_args):
     ###
     # Evaluation Phase
     ###
-    results = {}
     logger.info("*** Evaluation Phase ***")
-    metrics = trainer.evaluate(eval_dataset=vectorized_datasets["valid"])
-    metrics["eval_samples"] = len(vectorized_datasets["valid"])
+    for subset in vectorized_datasets.keys():
+        if 'test' not in subset:
+            continue
+            
+        metrics = trainer.evaluate(eval_dataset=vectorized_datasets[subset])
+        metrics[f"eval_{subset}_samples"] = len(vectorized_datasets[subset])
 
-    trainer.log_metrics("eval", metrics)
-    trainer.save_metrics("eval", metrics)
+        trainer.log_metrics(f"eval_{subset}", metrics)
+        trainer.save_metrics(f"eval_{subset}", metrics)
     
 #####
 # Entry Point

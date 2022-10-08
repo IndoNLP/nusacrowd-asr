@@ -109,8 +109,12 @@ class AdditionalTrainingArguments:
     Additional training arguments
     """
     lang: Optional[str] = field(
-        default="eng,yue,cs-eng,cs-yue",
-        metadata={"help": "Language types that will be used: eng, yue, cs-eng, cs-yue. Separated by a comma."},
+        default=None,
+        metadata={"help": "Language types that will be used: all, ind, sun, jav, ban, btk, ace, etc. Separated by a comma."},
+    )
+    task_config_name: Optional[str] = field(
+        default=None,
+        metadata={"help": "Task config name that will be used. Check `dataloader.py` for the valid config name.."},
     )
     early_stopping_patience: Optional[int] = field(
         default=5,

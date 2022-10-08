@@ -72,7 +72,7 @@ SPEECH_TO_SPEECH_TASKS = [
 # Global Config Helper
 conhelps = NusantaraConfigHelper()
 
-# Basic Loader
+# Basic Loader    
 def load_asr_tasks(langs=['ind']):
     tasks = []
     for lang in langs:
@@ -114,6 +114,24 @@ def load_s2s_tasks():
     return s2s_datasets
 
 # Experiment Data Loader
+
+# Input:
+#    config_name (str): task config name used for loading a single ASr dataset
+# Output:
+#    train_dataset (Dataset): training dataset, instance of HuggingFace datasets.Dataset
+#    train_dataset (Dataset): training dataset, instance of HuggingFace datasets.Dataset
+#    test_datasets (dict<str: Dataset>): a map from config_name to the test dataset
+def load_asr_task(config_name):
+    for helper in conhelps.filtered(lambda x: x.config.name == config_name):
+        print(f'Loading {helper.config.name}')
+        dset = helper.load_dataset()
+        
+        train_dataset, test_dataset = dset['train'], dset['test']
+        tr_val_dataset = train_dataset.train_test_split(test_size=100, seed=20221010)
+        train_dataset, valid_dataset = tr_val_dataset['train'], tr_val_dataset['test']
+    
+        return train_dataset, valid_dataset, {helper.config.name: test_dataset}
+
 # Input:
 #    asr (bool): whether to load from ASR datasets or not
 #    tts (bool): whether to load from TTS datasets or not
@@ -121,7 +139,7 @@ def load_s2s_tasks():
 # Output:
 #    train_dataset (Dataset): training dataset, instance of HuggingFace datasets.Dataset
 #    train_dataset (Dataset): training dataset, instance of HuggingFace datasets.Dataset
-#    test_datasets (dict<str: Dataset>): a map from config_name to 
+#    test_datasets (dict<str: Dataset>): a map from config_name to the test dataset
 def load_speech_datasets(asr=True, tts=True, train_lang='ind'):
     all_langs = list(set(list(SPEECH_RECOGNITION_TASKS.keys()) + list(TTS_TASKS.keys())))
     if type(train_lang) is str:
@@ -153,7 +171,7 @@ def load_speech_datasets(asr=True, tts=True, train_lang='ind'):
     tr_val_dataset = train_dataset.train_test_split(test_size=100 * len(datasets), seed=20221010)
     train_dataset, valid_dataset = tr_val_dataset['train'], tr_val_dataset['test']
     
-    return train_dataset, valid_dataset, test_dataset_dict    
+    return train_dataset, valid_dataset, test_dataset_dict
 
 if __name__ == '__main__':
     print('Load Buginese Speech Datasets...')
