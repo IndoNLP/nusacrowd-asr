@@ -6,23 +6,23 @@ from datasets import concatenate_datasets, load_dataset, DatasetDict
 SPEECH_RECOGNITION_TASKS = {
     'ind': [
         'indspeech_digit_cdsr_nusantara_sptext',
-        'indspeech_news_lvcsr_nusantara_sptext',
-        'indspeech_teldialog_lvcsr_nusantara_sptext',
-        'indspeech_teldialog_svcsr_nusantara_sptext',
+        # 'indspeech_news_lvcsr_nusantara_sptext',
+        # 'indspeech_teldialog_lvcsr_nusantara_sptext',
+        # 'indspeech_teldialog_svcsr_nusantara_sptext',
         'librivox_indonesia_ind_nusantara_sptext',
         'titml_idn_nusantara_sptext'
     ], 
     'sun': [
-        'indspeech_newstra_ethnicsr_nooverlap_sun_nusantara_sptext',
-        'indspeech_news_ethnicsr_su_nooverlap_nusantara_sptext',
+        # 'indspeech_newstra_ethnicsr_nooverlap_sun_nusantara_sptext',
+        # 'indspeech_news_ethnicsr_su_nooverlap_nusantara_sptext',
         'librivox_indonesia_sun_nusantara_sptext',
-        'su_id_asr_nusantara_sptext',
+        # 'su_id_asr_nusantara_sptext',
     ],
     'jav': [
-        'indspeech_newstra_ethnicsr_nooverlap_jav_nusantara_sptext',
-        'indspeech_news_ethnicsr_jv_nooverlap_nusantara_sptext',
+        # 'indspeech_newstra_ethnicsr_nooverlap_jav_nusantara_sptext',
+        # 'indspeech_news_ethnicsr_jv_nooverlap_nusantara_sptext',
         'librivox_indonesia_jav_nusantara_sptext',
-        'jv_id_asr_nusantara_sptext',
+        # 'jv_id_asr_nusantara_sptext',
     ],
     'ban': [
         'indspeech_newstra_ethnicsr_nooverlap_ban_nusantara_sptext',
@@ -84,7 +84,7 @@ def load_asr_tasks(langs=['ind']):
         asr_datasets[helper.config.name] = helper.load_dataset() 
     return asr_datasets
 
-def load_tts_tasks(lang=['ind']):
+def load_tts_tasks(langs=['ind']):
     tasks = []
     for lang in langs:
         tasks += TTS_TASKS[lang] if lang in TTS_TASKS else []
@@ -121,7 +121,7 @@ def load_s2s_tasks():
 #    train_dataset (Dataset): training dataset, instance of HuggingFace datasets.Dataset
 #    train_dataset (Dataset): training dataset, instance of HuggingFace datasets.Dataset
 #    test_datasets (dict<str: Dataset>): a map from config_name to the test dataset
-def load_asr_task(config_name):
+def load_speech_task(config_name):
     for helper in conhelps.filtered(lambda x: x.config.name == config_name):
         print(f'Loading {helper.config.name}')
         dset = helper.load_dataset()
@@ -142,15 +142,17 @@ def load_asr_task(config_name):
 #    test_datasets (dict<str: Dataset>): a map from config_name to the test dataset
 def load_speech_datasets(asr=True, tts=True, train_lang='ind'):
     all_langs = list(set(list(SPEECH_RECOGNITION_TASKS.keys()) + list(TTS_TASKS.keys())))
-    if type(train_lang) is str:
-        train_lang = [train_lang]
     if train_lang == 'all':
         train_lang = all_langs
+    if type(train_lang) is str:
+        train_lang = [train_lang]
         
     train_configs = list(chain(*(
                         [[cfg for cfg in SPEECH_RECOGNITION_TASKS[lang]] for lang in train_lang if lang in SPEECH_RECOGNITION_TASKS] + 
                         [[cfg for cfg in TTS_TASKS[lang]] for lang in train_lang if lang in TTS_TASKS]
                     )))
+    
+    print('train_configs', train_configs)
 
     datasets = {}
     if asr:
@@ -161,12 +163,12 @@ def load_speech_datasets(asr=True, tts=True, train_lang='ind'):
     train_datasets = []
     test_dataset_dict = {}
     for config_name, dataset in datasets.items():
-        if 'train' in dataset and config_name in train_configs:
+        if 'train' in dataset.keys() and config_name in train_configs:
             train_datasets.append(dataset['train'])
-        if 'test' in dataset:
+        if 'test' in dataset.keys():
             test_dataset_dict[config_name] = dataset['test']
-        
-    train_dataset = concatenate_datasets([train_datasets])
+
+    train_dataset = concatenate_datasets(train_datasets)
     
     tr_val_dataset = train_dataset.train_test_split(test_size=100 * len(datasets), seed=20221010)
     train_dataset, valid_dataset = tr_val_dataset['train'], tr_val_dataset['test']

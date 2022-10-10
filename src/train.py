@@ -40,7 +40,7 @@ from transformers.utils.versions import require_version
 from utils.args_helper import AdditionalTrainingArguments, ModelArguments, DataArguments, TrainingArguments
 from utils.asr_utils import CHARS_TO_IGNORE, tokenize_for_mer, tokenize_for_cer
 from utils.data_utils import DataCollatorCTCWithPadding
-from utils.dataloader import load_speech_datasets, load_asr_task
+from utils.dataloader import load_speech_datasets, load_speech_task
 
 import datasets
 from datasets import load_from_disk, set_caching_enabled
@@ -184,10 +184,10 @@ def run(model_args, data_args, training_args, additional_training_args):
         if task_config_name is not None:
             # Use task config name
             print('Loading dataset...')
-            train_dataset, valid_dataset, test_dataset_dict = load_asr_task(task_config_name)
+            train_dataset, valid_dataset, test_dataset_dict = load_speech_task(task_config_name)
         else:
             # Use language
-            lang = additional_training_args.lang.split(",")
+            lang = additional_training_args.lang.split(",") if ',' in additional_training_args.lang else additional_training_args.lang
             print('LANGUAGE TYPES USED: {}'.format(lang))
 
             print('Loading dataset...')
@@ -415,6 +415,9 @@ def run(model_args, data_args, training_args, additional_training_args):
             continue
             
         metrics = trainer.evaluate(eval_dataset=vectorized_datasets[subset])
+        for key in metrics.keys():
+            metrics[key.replace('eval_',f'eval_{subset}_')] = metrics[key]
+            del metrics[key]
         metrics[f"eval_{subset}_samples"] = len(vectorized_datasets[subset])
 
         trainer.log_metrics(f"eval_{subset}", metrics)

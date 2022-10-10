@@ -1,7 +1,9 @@
+# We need to use torchaudio<0.12.0 due to some error with the new torchaudio backend (https://github.com/huggingface/transformers/issues/18379)
+
 numpy
 pandas
-torchaudio
-torch
+torchaudio==0.11.0
+torch==1.11.0
 librosa
 datasets
 transformers
