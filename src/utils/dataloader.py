@@ -13,14 +13,14 @@ SPEECH_RECOGNITION_TASKS = {
         'titml_idn_nusantara_sptext'
     ], 
     'sun': [
-        # 'indspeech_newstra_ethnicsr_nooverlap_sun_nusantara_sptext',
-        # 'indspeech_news_ethnicsr_su_nooverlap_nusantara_sptext',
+        'indspeech_newstra_ethnicsr_nooverlap_sun_nusantara_sptext',
+        'indspeech_news_ethnicsr_su_nooverlap_nusantara_sptext',
         'librivox_indonesia_sun_nusantara_sptext',
         # 'su_id_asr_nusantara_sptext',
     ],
     'jav': [
-        # 'indspeech_newstra_ethnicsr_nooverlap_jav_nusantara_sptext',
-        # 'indspeech_news_ethnicsr_jv_nooverlap_nusantara_sptext',
+        'indspeech_newstra_ethnicsr_nooverlap_jav_nusantara_sptext',
+        'indspeech_news_ethnicsr_jv_nooverlap_nusantara_sptext',
         'librivox_indonesia_jav_nusantara_sptext',
         # 'jv_id_asr_nusantara_sptext',
     ],
@@ -151,8 +151,6 @@ def load_speech_datasets(asr=True, tts=True, train_lang='ind'):
                         [[cfg for cfg in SPEECH_RECOGNITION_TASKS[lang]] for lang in train_lang if lang in SPEECH_RECOGNITION_TASKS] + 
                         [[cfg for cfg in TTS_TASKS[lang]] for lang in train_lang if lang in TTS_TASKS]
                     )))
-    
-    print('train_configs', train_configs)
 
     datasets = {}
     if asr:
@@ -173,6 +171,7 @@ def load_speech_datasets(asr=True, tts=True, train_lang='ind'):
     tr_val_dataset = train_dataset.train_test_split(test_size=100 * len(datasets), seed=20221010)
     train_dataset, valid_dataset = tr_val_dataset['train'], tr_val_dataset['test']
     
+    print('test_dataset_dict', test_dataset_dict.keys())
     return train_dataset, valid_dataset, test_dataset_dict
 
 if __name__ == '__main__':

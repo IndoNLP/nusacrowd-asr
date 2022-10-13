@@ -225,7 +225,7 @@ def run(model_args, data_args, training_args, additional_training_args):
         # Build vocabulary
         print('Build vocabulary...')
         def extract_all_chars(batch):
-            all_text = " ".join(batch[data_args.text_column_name])
+            all_text = " ".join([text.lower() for text in batch[data_args.text_column_name]])
             vocab = list(set(all_text))
             return {"vocab": [vocab], "all_text": [all_text]}
 
@@ -411,17 +411,21 @@ def run(model_args, data_args, training_args, additional_training_args):
     ###
     logger.info("*** Evaluation Phase ***")
     for subset in vectorized_datasets.keys():
-        if 'test' not in subset:
-            continue
-            
+        if 'test_' not in subset:
+            continue            
+        
+        subset_id = subset.replace('test_', '')
+        print(f'Performing evaluation on `{subset_id}`')
         metrics = trainer.evaluate(eval_dataset=vectorized_datasets[subset])
-        for key in metrics.keys():
-            metrics[key.replace('eval_',f'eval_{subset}_')] = metrics[key]
+        
+        keys = list(metrics.keys())
+        for key in keys:
+            metrics[key.replace('eval_',f'eval_{subset_id}_')] = metrics[key]
             del metrics[key]
         metrics[f"eval_{subset}_samples"] = len(vectorized_datasets[subset])
 
-        trainer.log_metrics(f"eval_{subset}", metrics)
-        trainer.save_metrics(f"eval_{subset}", metrics)
+        trainer.log_metrics(f"eval_{subset_id}", metrics)
+        trainer.save_metrics(f"eval_{subset_id}", metrics)
     
 #####
 # Entry Point
