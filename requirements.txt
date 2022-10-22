@@ -16,3 +16,4 @@ fairscale
 tqdm
 editdistance
 jieba
+git+https://github.com/IndoNLP/nusa-crowd.git@release_exp

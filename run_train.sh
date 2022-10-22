@@ -3,28 +3,28 @@
 #######
 ## Task Specific
 #######
-# CUDA_VISIBLE_DEVICES=1 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
-#    --task_config_name indspeech_digit_cdsr_nusantara_sptext \
-#    --preprocessing_num_workers=16 --audio_column_name=audio --text_column_name=text \
-#    --per_device_train_batch_size=8 --per_device_eval_batch_size=8 \
-#    --dataloader_num_workers=16 --dataloader_pin_memory --group_by_length \
-#    --seed=14045 --num_train_epochs=3 --learning_rate=5e-5 \
-#    --fp16 --fp16_backend=cuda_amp \
-#    --logging_strategy=steps --logging_steps=10 --report_to=tensorboard \
-#    --evaluation_strategy=epoch --eval_steps=1 --eval_accumulation_steps=1 \
-#    --save_strategy=epoch --save_steps=1 --save_total_limit=3 --load_best_model_at_end \
-#    --metric_for_best_model=mer --greater_is_better=False \
-#    --gradient_checkpointing=True \
-#    --cache_dir=./cache/direct_ft/ \
-#    --output_dir=./save/direct_ft/
+CUDA_VISIBLE_DEVICES=0 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
+   --task_config_name indspeech_digit_cdsr_nusantara_sptext \
+   --preprocessing_num_workers=16 --audio_column_name=audio --text_column_name=text \
+   --per_device_train_batch_size=4 --per_device_eval_batch_size=8 --gradient_accumulation_steps 2 \
+   --dataloader_num_workers=16 --dataloader_pin_memory --group_by_length \
+   --seed=14045 --num_train_epochs=3 --learning_rate=5e-5 \
+   --fp16 --fp16_backend=cuda_amp \
+   --logging_strategy=steps --logging_steps=10 --report_to=tensorboard \
+   --evaluation_strategy=epoch --eval_steps=1 --eval_accumulation_steps=1 \
+   --save_strategy=epoch --save_steps=1 --save_total_limit=3 --load_best_model_at_end \
+   --metric_for_best_model=mer --greater_is_better=False \
+   --gradient_checkpointing=True \
+   --cache_dir=./cache/direct_ft/ \
+   --output_dir=./save/direct_ft/
    
 #######
 ## Monolingual Sundanese
 #######
-CUDA_VISIBLE_DEVICES=1 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
+CUDA_VISIBLE_DEVICES=0 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
    --lang sun \
    --preprocessing_num_workers=16 --audio_column_name=audio --text_column_name=text \
-   --per_device_train_batch_size=8 --per_device_eval_batch_size=8 \
+   --per_device_train_batch_size=4 --per_device_eval_batch_size=8 --gradient_accumulation_steps 2 \
    --dataloader_num_workers=16 --dataloader_pin_memory --group_by_length \
    --seed=14045 --num_train_epochs=3 --learning_rate=5e-5 \
    --fp16 --fp16_backend=cuda_amp \
@@ -39,10 +39,10 @@ CUDA_VISIBLE_DEVICES=1 python src/train.py --model_name_or_path=facebook/wav2vec
 #######
 ## Monolingual Javanese
 #######
-CUDA_VISIBLE_DEVICES=1 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
+CUDA_VISIBLE_DEVICES=0 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
    --lang jav \
    --preprocessing_num_workers=16 --audio_column_name=audio --text_column_name=text \
-   --per_device_train_batch_size=8 --per_device_eval_batch_size=8 \
+   --per_device_train_batch_size=4 --per_device_eval_batch_size=8 --gradient_accumulation_steps 2 \
    --dataloader_num_workers=16 --dataloader_pin_memory --group_by_length \
    --seed=14045 --num_train_epochs=3 --learning_rate=5e-5 \
    --fp16 --fp16_backend=cuda_amp \
@@ -55,12 +55,12 @@ CUDA_VISIBLE_DEVICES=1 python src/train.py --model_name_or_path=facebook/wav2vec
    --output_dir=./save/jav_lang/
 
 #######
-## Multilingual Sundanese
+## Multilingual All
 #######
-CUDA_VISIBLE_DEVICES=2 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
+CUDA_VISIBLE_DEVICES=0 python src/train.py --model_name_or_path=facebook/wav2vec2-large-xlsr-53 \
    --lang all \
    --preprocessing_num_workers=16 --audio_column_name=audio --text_column_name=text \
-   --per_device_train_batch_size=8 --per_device_eval_batch_size=8 \
+   --per_device_train_batch_size=2 --per_device_eval_batch_size=4 --gradient_accumulation_steps 4 \
    --dataloader_num_workers=16 --dataloader_pin_memory --group_by_length \
    --seed=14045 --num_train_epochs=3 --learning_rate=5e-5 \
    --fp16 --fp16_backend=cuda_amp \
