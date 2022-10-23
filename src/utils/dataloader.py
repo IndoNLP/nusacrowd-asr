@@ -6,9 +6,9 @@ from datasets import concatenate_datasets, load_dataset, DatasetDict
 SPEECH_RECOGNITION_TASKS = {
     'ind': [
         'indspeech_digit_cdsr_nusantara_sptext',
-        # 'indspeech_news_lvcsr_nusantara_sptext',
-        # 'indspeech_teldialog_lvcsr_nusantara_sptext',
-        # 'indspeech_teldialog_svcsr_nusantara_sptext',
+        'indspeech_news_lvcsr_nusantara_sptext',
+        'indspeech_teldialog_lvcsr_nusantara_sptext',
+        'indspeech_teldialog_svcsr_nusantara_sptext',
         'librivox_indonesia_ind_nusantara_sptext',
         'titml_idn_nusantara_sptext'
     ], 
@@ -16,13 +16,13 @@ SPEECH_RECOGNITION_TASKS = {
         'indspeech_newstra_ethnicsr_nooverlap_sun_nusantara_sptext',
         'indspeech_news_ethnicsr_su_nooverlap_nusantara_sptext',
         'librivox_indonesia_sun_nusantara_sptext',
-        # 'su_id_asr_nusantara_sptext',
+        'su_id_asr_nusantara_sptext',
     ],
     'jav': [
         'indspeech_newstra_ethnicsr_nooverlap_jav_nusantara_sptext',
         'indspeech_news_ethnicsr_jv_nooverlap_nusantara_sptext',
         'librivox_indonesia_jav_nusantara_sptext',
-        # 'jv_id_asr_nusantara_sptext',
+        'jv_id_asr_nusantara_sptext',
     ],
     'ban': [
         'indspeech_newstra_ethnicsr_nooverlap_ban_nusantara_sptext',
@@ -44,7 +44,7 @@ SPEECH_RECOGNITION_TASKS = {
 
 TTS_TASKS = {
     'ind': [
-        'indspeech_news_tts_nusantara_sptext'
+        'indspeech_news_tts_120_MOS_nusantara_sptext'
     ],
     'jav': [
         'jv_id_tts_nusantara_sptext'
