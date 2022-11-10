@@ -265,7 +265,7 @@ def run(model_args, data_args, training_args, additional_training_args):
 
             # Preprocess text
             with processor.as_target_processor():
-                batch["labels"] = processor(batch[data_args.text_column_name]).input_ids
+                batch["labels"] = processor(text=batch[data_args.text_column_name]).input_ids
 
             return batch
 
@@ -280,11 +280,12 @@ def run(model_args, data_args, training_args, additional_training_args):
                     subset: f"{cache_dir_path}/{subset}_vec.arrow" for subset in raw_datasets.keys()
                 }
             )
-        
+
         vectorized_datasets.save_to_disk("{}/preprocess_data.arrow".format(cache_dir_path))
     else:
-        print('Loading cached dataset...')
-        vectorized_datasets = datasets.load_from_disk('{}/preprocess_data.arrow'.format(cache_dir_path))
+        with training_args.main_process_first(desc="dataset map special characters removal"):
+            print('Loading cached dataset...')
+            vectorized_datasets = datasets.load_from_disk('{}/preprocess_data.arrow'.format(cache_dir_path))
 
         # Load processor
         processor = load_processor(model_args, training_args)
@@ -309,7 +310,6 @@ def run(model_args, data_args, training_args, additional_training_args):
         "gradient_checkpointing": training_args.gradient_checkpointing,
     })
     model = Wav2Vec2ForCTC.from_pretrained(model_args.model_name_or_path, config=config)
-    model.cuda()
 
     def _resize_token_embeddings(model, new_num_tokens):
         old_lm_head = model.lm_head
@@ -319,7 +319,6 @@ def run(model_args, data_args, training_args, additional_training_args):
         return model
 
     model = _resize_token_embeddings(model, processor.tokenizer.vocab_size)
-
 
     # Instantiate custom data collator
     data_collator = DataCollatorCTCWithPadding(processor=processor)
@@ -333,10 +332,14 @@ def run(model_args, data_args, training_args, additional_training_args):
 
         pred_strs = processor.batch_decode(pred_ids)
         # pred_strs = [s.replace("[PAD]", "") for s in pred_strs]
-        print(pred_strs)
 
         # we do not want to group tokens when computing the metrics
         label_strs = processor.batch_decode(pred.label_ids, group_tokens=False)
+
+        print('pred_strs')
+        print(pred_strs[:5])
+        print('label_strs')
+        print(label_strs[:5])
 
         def _calculate_mer_and_cer(pred_strs, label_strs):
             if len(label_strs) == 0:
@@ -346,13 +349,13 @@ def run(model_args, data_args, training_args, additional_training_args):
                 char_distance, char_tokens = 0, 0
                 for i, (pred_str, label_str) in enumerate(zip(pred_strs, label_strs)):
                     # Calculate 
-                    m_pred = tokenize_for_mer(pred_str)
-                    m_ref = tokenize_for_mer(label_str)
+                    m_pred = tokenize_for_mer(pred_str.replace(processor.tokenizer.unk_token, ''))
+                    m_ref = tokenize_for_mer(label_str.replace(processor.tokenizer.unk_token, ''))
                     mixed_distance += editdistance.distance(m_pred, m_ref)
                     mixed_tokens += len(m_ref)
 
-                    c_pred = tokenize_for_cer(pred_str)
-                    c_ref = tokenize_for_cer(label_str)
+                    c_pred = tokenize_for_cer(pred_str.replace(processor.tokenizer.unk_token, ''))
+                    c_ref = tokenize_for_cer(label_str.replace(processor.tokenizer.unk_token, ''))
                     char_distance += editdistance.distance(c_pred, c_ref)
                     char_tokens += len(c_ref)
                 mer = mixed_distance / mixed_tokens
@@ -386,11 +389,10 @@ def run(model_args, data_args, training_args, additional_training_args):
     print('*** Training Phase ***')
     
     # use last checkpoint if exist
-    # if os.path.isdir(model_args.model_name_or_path):
-    #     checkpoint = model_args.model_name_or_path
-    # else:
-    #     checkpoint = None
-    checkpoint=None
+    if model_args.checkpoint_path is not None:
+        checkpoint = model_args.checkpoint_path
+    else:
+        checkpoint = None
 
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
     trainer.save_model()

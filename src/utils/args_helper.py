@@ -10,6 +10,9 @@ class ModelArguments:
     model_name_or_path: Optional[str] = field(
         default="ydshieh/wav2vec2-large-xlsr-53-chinese-zh-cn-gpt", metadata={"help": "The path of the HuggingFace model."}
     )
+    checkpoint_path: Optional[str] = field(
+        default=None, metadata={"help": "The path of the last checkpoint."}
+    )
     mask_time_prob: float = field(
         default=0.065,
         metadata={

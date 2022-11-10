@@ -2,8 +2,8 @@
 
 numpy
 pandas
-torchaudio==0.11.0
-torch==1.11.0
+torchaudio==0.13.0
+torch==1.13.0
 librosa
 datasets
 transformers
