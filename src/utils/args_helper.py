@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
-from transformers import TrainingArguments
+from transformers import TrainingArguments, Seq2SeqTrainingArguments
 
 @dataclass
 class ModelArguments:
@@ -104,6 +104,28 @@ class TrainingArguments(TrainingArguments):
     eval_accumulation_steps: Optional[int] = field(
         default=1,
         metadata={"help": "Evaluation accumulation steps"}
+    )
+
+@dataclass
+class Seq2SeqTrainingArguments(Seq2SeqTrainingArguments):
+    """
+    Arguments pertraining to the training pipeline.
+    """
+    output_dir: Optional[str] = field(
+        default="./save",
+        metadata={"help": "Output directory"},
+    )
+    output_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "Path of output directory. Overrides output_dir settings."}
+    )
+    eval_accumulation_steps: Optional[int] = field(
+        default=1,
+        metadata={"help": "Evaluation accumulation steps"}
+    )
+    predict_with_generate: Optional[bool] = field(
+        default=True,
+        metadata={"help": "Whether to use generate to calculate generative metrics (ROUGE, BLEU)."}
     )
 
 @dataclass
