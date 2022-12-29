@@ -1,3 +1,4 @@
+import evaluate
 import os, sys
 import logging
 import numpy as np
@@ -324,6 +325,7 @@ def run(model_args, data_args, training_args, additional_training_args):
     data_collator = DataCollatorCTCWithPadding(processor=processor)
 
     # Define compute metric function
+    metric = evaluate.load("wer")
     def compute_metrics(pred):
         logger.info("*** Compute metrics ***")
         pred_logits = pred.predictions
@@ -336,11 +338,7 @@ def run(model_args, data_args, training_args, additional_training_args):
         # we do not want to group tokens when computing the metrics
         label_strs = processor.batch_decode(pred.label_ids, group_tokens=False)
 
-        print('pred_strs')
-        print(pred_strs[:5])
-        print('label_strs')
-        print(label_strs[:5])
-
+        wer = metric.compute(predictions=pred_strs, references=label_strs)
         def _calculate_mer_and_cer(pred_strs, label_strs):
             if len(label_strs) == 0:
                 return 0, 0
@@ -365,7 +363,7 @@ def run(model_args, data_args, training_args, additional_training_args):
         mer, cer = _calculate_mer_and_cer(pred_strs, label_strs)
 
         metrics = {
-            "mer": mer, "cer": cer
+            "mer": mer, "cer": cer, "wer": wer,
         }
 
         logger.info(json.dumps(metrics))
