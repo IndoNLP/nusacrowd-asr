@@ -181,8 +181,7 @@ def run(model_args, data_args, training_args, additional_training_args):
     # Load metrics
     metric = evaluate.load("wer")
     def compute_metrics(pred):
-        pred_logits = pred.predictions
-        pred_ids = torch.argmax(pred_logits, dim=-1)
+        pred_ids = pred.predictions
         pred.label_ids[pred.label_ids == -100] = processor.tokenizer.pad_token_id
         pred_str = processor.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
         label_str = processor.tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
