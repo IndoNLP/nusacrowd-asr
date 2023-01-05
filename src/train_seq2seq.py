@@ -25,17 +25,32 @@ set_caching_enabled(True)
 logger = logging.getLogger(__name__)    
 
 
-def load_processor(model_args, training_args):
+def load_processor(model_args, training_args, additional_training_args):
     # Load processor
     print('Load Whisper processor...')
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
     logger.info("Vocab size: {}".format(tokenizer.vocab_size))
     print("Vocab size:", tokenizer.vocab_size)
 
+    if additional_training_args.lang is not None:
+        if additional_training_args.lang == "sun":
+            language = "sundanese"
+        elif additional_training_args.lang == "jav":
+            language = "javanese"
+        else:
+            language = "indonesian"
+    else:
+        if "_sun" in additional_training_args.task_config_name or "_su" in additional_training_args.task_config_name:
+            language = "sundanese"
+        elif "_jav" in additional_training_args.task_config_name or "_jv" in additional_training_args.task_config_name:
+            language = "javanese"
+        else:
+            language = "indonesian"
+
     # if data_args.language is not None:
     # We only need to set the task id when the language is specified (i.e. in a multilingual setting)
     tokenizer.set_prefix_tokens(
-        # language=data_args.language,
+        language=language,
         task="transcribe"
     )
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_args.model_name_or_path)
@@ -96,6 +111,8 @@ def run(model_args, data_args, training_args, additional_training_args):
                 batch[data_args.text_column_name] = batch[data_args.text_column_name] + " "
             return batch
 
+        datasets.set_caching_enabled(True)
+
         with training_args.main_process_first(desc="dataset map special characters removal"):
             raw_datasets = raw_datasets.map(
                 remove_special_characters,
@@ -108,7 +125,7 @@ def run(model_args, data_args, training_args, additional_training_args):
             )
 
         # Load processor
-        processor = load_processor(model_args, training_args)
+        processor = load_processor(model_args, training_args, additional_training_args)
 
         # 6. Resample speech dataset if necessary
         dataset_sampling_rate = next(iter(raw_datasets.values())).features[data_args.audio_column_name].sampling_rate
@@ -152,7 +169,7 @@ def run(model_args, data_args, training_args, additional_training_args):
             vectorized_datasets = datasets.load_from_disk('{}/preprocess_data.arrow'.format(cache_dir_path))
 
         # Load processor
-        processor = load_processor(model_args, training_args)
+        processor = load_processor(model_args, training_args, additional_training_args)
 
     if data_args.preprocessing_only:
         logger.info(f"Data preprocessing finished. Files cached at {vectorized_datasets.cache_files}")
